@@ -1,4 +1,4 @@
-﻿namespace TSP_Solver_nanware
+﻿namespace TSP_Solver
 {
     #region 2D
     public class TSPSolver2D
