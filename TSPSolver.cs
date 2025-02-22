@@ -979,33 +979,16 @@
             City3 minZ = points.OrderBy(p => p.Position.Z).First();
             City3 maxZ = points.OrderBy(p => p.Position.Z).Last();
 
-            List<City3> baseTetra = new List<City3> { minX, maxX, minY, maxY };
+            List<Face> hull = new List<Face>();
 
-            List<Face> hull = new List<Face>
-            {
-                new Face(baseTetra[0], baseTetra[1], baseTetra[2]),
-                new Face(baseTetra[0], baseTetra[1], baseTetra[3]),
-                new Face(baseTetra[0], baseTetra[2], baseTetra[3]),
-                new Face(baseTetra[1], baseTetra[2], baseTetra[3])
-            };
-
-            foreach (var p in points)
-            {
-                if (baseTetra.Contains(p)) continue;
-
-                List<Face> visibleFaces = hull.Where(f => Vector3.Dot(f.Normal, p.Position - f.A.Position) > 0).ToList();
-
-                if (visibleFaces.Count == 0) continue;
-
-                hull.RemoveAll(f => visibleFaces.Contains(f));
-
-                foreach (var face in visibleFaces)
-                {
-                    hull.Add(new Face(face.A, face.B, p));
-                    hull.Add(new Face(face.B, face.C, p));
-                    hull.Add(new Face(face.C, face.A, p));
-                }
-            }
+            hull.Add(new Face(minX, minY, minZ));
+            hull.Add(new Face(minX, minY, maxZ));
+            hull.Add(new Face(minX, maxY, minZ));
+            hull.Add(new Face(minX, maxY, maxZ));
+            hull.Add(new Face(maxX, minY, minZ));
+            hull.Add(new Face(maxX, minY, maxZ));
+            hull.Add(new Face(maxX, maxY, minZ));
+            hull.Add(new Face(maxX, maxY, maxZ));
 
             return hull;
         }
