@@ -1,11 +1,17 @@
 ﻿namespace TSP_Solver
 {
     #region 2D
+    /// <summary>
+    /// The 2D solver
+    /// </summary>
     public class TSPSolver2D
     {
         public List<City2> Cities { get; set; } = new();
         public List<Distance2> Distances { get; set; } = new();
-
+        /// <summary>
+        /// 2D solver builder
+        /// </summary>
+        /// <param name="cities"></param>
         public TSPSolver2D(List<City2> cities)
         {
             Cities = cities;
@@ -19,38 +25,51 @@
             }
         }
 
+        /// <summary>
+        /// The function for solving the problem in a 2D configuration
+        /// </summary>
+        /// <param name="threeOpt"></param>
+        /// <returns>The best route found, its distance and the MST</returns>
         public (List<City2> route, double length, double MST) Solve(bool threeOpt)
         {
-            (List<City2> route, double length) result = TSPSolver2DFunctions.Solve(Cities, Distances);
-            TSPSolver2DFunctions.TwoOpt(ref result.route);
+            List<City2> route = TSPSolver2DFunctions.Solve(Cities, Distances);
+            TSPSolver2DFunctions.TwoOpt(ref route);
 
             if (threeOpt)
-                TSPSolver2DFunctions.ThreeOpt(ref result.route);
+                TSPSolver2DFunctions.ThreeOpt(ref route);
 
             bool improved = true;
 
             while (improved)
             {
-                improved = TSPSolver2DFunctions.OneOpt(ref result.route);
+                improved = TSPSolver2DFunctions.OneOpt(ref route);
             }
 
-            TSPSolver2DFunctions.TwoOpt(ref result.route);
+            TSPSolver2DFunctions.TwoOpt(ref route);
 
             if (threeOpt)
-                TSPSolver2DFunctions.ThreeOpt(ref result.route);
+                TSPSolver2DFunctions.ThreeOpt(ref route);
+
+            double length = TSPSolver2DFunctions.CalculateTotalPathLength(route);
 
             double MST = TSPSolver2DFunctions.ComputeMSTLength(Cities, Distances).Item2;
 
-            return (result.route, result.length, MST);
+            return (route, length, MST);
         }
     }
 
+    /// <summary>
+    /// The class contains the functions used by the 2D solver, so you don't need to use it
+    /// </summary>
     public static class TSPSolver2DFunctions
     {
-        public static (List<City2> route, double length) Solve(List<City2> cities, List<Distance2> distances)
+        public static List<City2> Solve(List<City2> cities, List<Distance2> distances)
         {
             int numberOfCities = 0;
             numberOfCities = cities.Count;
+
+            List<City2> convexHull = GetConvexHull(cities);
+            double convexHullArea = ComputeConvexHullArea(convexHull);
 
             double MST = ComputeMSTLength(cities, distances).totalLength;
 
@@ -116,8 +135,6 @@
                     #endregion
 
                     #region Density factor
-                    List<City2> convexHull = GetConvexHull(cities);
-                    double convexHullArea = ComputeConvexHullArea(convexHull);
                     double densityFactor = MST / (numberOfCities * Math.Sqrt(convexHullArea));
 
                     densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
@@ -187,14 +204,8 @@
                 }
             }
 
-            double length = 0;
-            foreach (Distance2 distance in route)
-            {
-                length += Math.Sqrt(distance.DistanceSquear);
-            }
-
             List<City2> citiesTraveled = GetTravel(route);
-            return (citiesTraveled, length);
+            return citiesTraveled;
         }
 
         public static List<City2> GetTravel(List<Distance2> route)
@@ -274,7 +285,7 @@
                     {
                         if (ShouldSwap(route, i, j))
                         {
-                            TwoOptSwap(route, i, j);
+                            TwoOptSwap(ref route, i, j);
                             improvement = true;
                         }
                     }
@@ -290,7 +301,7 @@
             return distAfter < distBefore;
         }
 
-        public static void TwoOptSwap(List<City2> route, int i, int j)
+        public static void TwoOptSwap(ref List<City2> route, int i, int j)
         {
             while (i < j)
             {
@@ -334,8 +345,8 @@
         public static List<City2> Apply3OptSwap(List<City2> route, int i, int j, int k)
         {
             var newRoute = new List<City2>(route);
-            TwoOptSwap(newRoute, i, j);
-            TwoOptSwap(newRoute, j, k);
+            TwoOptSwap(ref newRoute, i, j);
+            TwoOptSwap(ref newRoute, j, k);
 
             return newRoute;
         }
@@ -496,7 +507,8 @@
                 for (int j = 0; j < route.Count; j++)
                 {
                     List<City2> newRoute = new List<City2>(route);
-                    TwoOptSwap(newRoute, i, j);
+                    newRoute.Remove(c);
+                    newRoute.Insert(j, c);
 
                     double l = CalculateTotalPathLength(newRoute);
 
@@ -516,6 +528,9 @@
         }
     }
 
+    /// <summary>
+    /// Class representing 2D points
+    /// </summary>
     public class City2 : City
     {
         public int Id { get; set; }
@@ -532,6 +547,9 @@
         }
     }
 
+    /// <summary>
+    /// Class used by the 2D solver, so you don't need to use it
+    /// </summary>
     public class Distance2
     {
         public City2 First { get; set; }
@@ -563,11 +581,17 @@
     #endregion
 
     #region 3D
+    /// <summary>
+    /// The 3D solver
+    /// </summary>
     public class TSPSolver3D
     {
         public List<City3> Cities { get; set; } = new();
         public List<Distance3> Distances { get; set; } = new();
-
+        /// <summary>
+        /// 3D solver builger
+        /// </summary>
+        /// <param name="cities"></param>
         public TSPSolver3D(List<City3> cities)
         {
             Cities = cities;
@@ -580,43 +604,55 @@
                 }
             }
         }
-
+        /// <summary>
+        /// The function for solving the problem in a 3D configuration
+        /// </summary>
+        /// <param name="threeOpt"></param>
+        /// <returns>The best route found, its distance and the MST</returns>
         public (List<City3> route, double length, double MST) Solve(bool threeOpt)
         {
-            (List<City3> route, double length) result = TSPSolver3DFunctions.Solve(Cities, Distances);
-            TSPSolver3DFunctions.TwoOpt(ref result.route);
+            List<City3> route = TSPSolver3DFunctions.Solve(Cities, Distances);
+            TSPSolver3DFunctions.TwoOpt(ref route);
 
             if (threeOpt)
             {
-                TSPSolver3DFunctions.ThreeOpt(ref result.route);
+                TSPSolver3DFunctions.ThreeOpt(ref route);
             }
 
             bool improved = true;
 
             while (improved)
             {
-                improved = TSPSolver3DFunctions.OneOpt(ref result.route);
+                improved = TSPSolver3DFunctions.OneOpt(ref route);
             }
 
-            TSPSolver3DFunctions.TwoOpt(ref result.route);
+            TSPSolver3DFunctions.TwoOpt(ref route);
 
             if (threeOpt)
             {
-                TSPSolver3DFunctions.ThreeOpt(ref result.route);
+                TSPSolver3DFunctions.ThreeOpt(ref route);
             }
+
+            double length = TSPSolver3DFunctions.CalculateTotalPathLength(route);
 
             double MST = TSPSolver3DFunctions.ComputeMSTLength(Cities, Distances).Item2;
 
-            return (result.route, result.length, MST);
+            return (route, length, MST);
         }
     }
 
+    /// <summary>
+    /// The class contains the functions used by the 3D solver, so you don't need to use it
+    /// </summary>
     public static class TSPSolver3DFunctions
     {
-        public static (List<City3> route, double length) Solve(List<City3> cities, List<Distance3> distances)
+        public static List<City3> Solve(List<City3> cities, List<Distance3> distances)
         {
             int numberOfCities = 0;
             numberOfCities = cities.Count;
+
+            List<Face> convexHull = GetConvexHull(cities);
+            double convexHullArea = ComputeConvexHullArea(convexHull);
 
             double MST = ComputeMSTLength(cities, distances).totalLength;
 
@@ -682,8 +718,6 @@
                     #endregion
 
                     #region Density factor
-                    List<Face> convexHull = GetApproximatedConvexHull(cities);
-                    double convexHullArea = ComputeConvexHullArea(convexHull);
                     double densityFactor = MST / (numberOfCities * Math.Sqrt(convexHullArea));
 
                     densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
@@ -753,14 +787,8 @@
                 }
             }
 
-            double length = 0;
-            foreach (Distance3 distance in route)
-            {
-                length += Math.Sqrt(distance.DistanceSquear);
-            }
-
             List<City3> citiesTraveled = GetTravel(route);
-            return (citiesTraveled, length);
+            return citiesTraveled;
         }
 
         public static List<City3> GetTravel(List<Distance3> route)
@@ -840,7 +868,7 @@
                     {
                         if (ShouldSwap(route, i, j))
                         {
-                            TwoOptSwap(route, i, j);
+                            TwoOptSwap(ref route, i, j);
                             improvement = true;
                         }
                     }
@@ -856,7 +884,7 @@
             return distAfter < distBefore;
         }
 
-        public static void TwoOptSwap(List<City3> route, int i, int j)
+        public static void TwoOptSwap(ref List<City3> route, int i, int j)
         {
             while (i < j)
             {
@@ -900,8 +928,8 @@
         public static List<City3> Apply3OptSwap(List<City3> route, int i, int j, int k)
         {
             var newRoute = new List<City3>(route);
-            TwoOptSwap(newRoute, i, j);
-            TwoOptSwap(newRoute, j, k);
+            TwoOptSwap(ref newRoute, i, j);
+            TwoOptSwap(ref newRoute, j, k);
 
             return newRoute;
         }
@@ -954,12 +982,12 @@
             List<City3> baseTetra = new List<City3> { minX, maxX, minY, maxY };
 
             List<Face> hull = new List<Face>
-    {
-        new Face(baseTetra[0], baseTetra[1], baseTetra[2]),
-        new Face(baseTetra[0], baseTetra[1], baseTetra[3]),
-        new Face(baseTetra[0], baseTetra[2], baseTetra[3]),
-        new Face(baseTetra[1], baseTetra[2], baseTetra[3])
-    };
+            {
+                new Face(baseTetra[0], baseTetra[1], baseTetra[2]),
+                new Face(baseTetra[0], baseTetra[1], baseTetra[3]),
+                new Face(baseTetra[0], baseTetra[2], baseTetra[3]),
+                new Face(baseTetra[1], baseTetra[2], baseTetra[3])
+            };
 
             foreach (var p in points)
             {
@@ -981,34 +1009,6 @@
 
             return hull;
         }
-
-        public static List<Face> GetApproximatedConvexHull(List<City3> points)
-        {
-            if (points.Count < 4) return new List<Face>();
-
-            City3 minX = points.OrderBy(p => p.Position.X).First();
-            City3 maxX = points.OrderBy(p => p.Position.X).Last();
-            City3 minY = points.OrderBy(p => p.Position.Y).First();
-            City3 maxY = points.OrderBy(p => p.Position.Y).Last();
-            City3 minZ = points.OrderBy(p => p.Position.Z).First();
-            City3 maxZ = points.OrderBy(p => p.Position.Z).Last();
-
-            List<City3> extremePoints = new List<City3> { minX, maxX, minY, maxY, minZ, maxZ };
-
-            List<Face> hull = new List<Face>();
-
-            hull.Add(new Face(minX, minY, minZ));
-            hull.Add(new Face(minX, minY, maxZ));
-            hull.Add(new Face(minX, maxY, minZ));
-            hull.Add(new Face(minX, maxY, maxZ));
-            hull.Add(new Face(maxX, minY, minZ));
-            hull.Add(new Face(maxX, minY, maxZ));
-            hull.Add(new Face(maxX, maxY, minZ));
-            hull.Add(new Face(maxX, maxY, maxZ));
-
-            return hull;
-        }
-
 
         public static double ComputeConvexHullArea(List<Face> hull)
         {
@@ -1091,7 +1091,8 @@
                 for (int j = 0; j < route.Count; j++)
                 {
                     List<City3> newRoute = new List<City3>(route);
-                    TwoOptSwap(newRoute, i, j);
+                    newRoute.Remove(c);
+                    newRoute.Insert(j, c);
 
                     double l = CalculateTotalPathLength(newRoute);
 
@@ -1111,6 +1112,9 @@
         }
     }
 
+    /// <summary>
+    /// Class representing 3D points
+    /// </summary>
     public class City3 : City
     {
         public int Id { get; set; }
@@ -1125,6 +1129,9 @@
         }
     }
 
+    /// <summary>
+    /// Class used by the 3D solver, so you don't need to use it
+    /// </summary>
     public class Distance3
     {
         public City3 First { get; set; }
@@ -1154,6 +1161,9 @@
         }
     }
 
+    /// <summary>
+    /// As a simple 3D vector, you don't need to know its functions or use it in any of your methods
+    /// </summary>
     public struct Vector3
     {
         public double X { get; set; }
@@ -1212,6 +1222,9 @@
         }
     }
 
+    /// <summary>
+    /// Class used by some solver functions, so you don't need it
+    /// </summary>
     public class Face
     {
         public City3 A, B, C;
@@ -1225,31 +1238,22 @@
             Normal = Vector3.Cross(B.Position - A.Position, C.Position - A.Position);
             Normal = Vector3.Normalize(Normal);
         }
-
-        public bool IsEqual(Face other)
-        {
-            return (A == other.A && B == other.B && C == other.C) ||
-                   (A == other.A && B == other.C && C == other.B) ||
-                   (A == other.B && B == other.A && C == other.C) ||
-                   (A == other.B && B == other.C && C == other.A) ||
-                   (A == other.C && B == other.A && C == other.B) ||
-                   (A == other.C && B == other.B && C == other.A);
-        }
-
-        public bool IsVisible(City3 point)
-        {
-            return Vector3.Dot(Normal, point.Position - A.Position) > 0;
-        }
     }
 
     #endregion
 
+    /// <summary>
+    /// Interface used by points
+    /// </summary>
     public interface City
     {
         int Id { get; set; }
         byte TimeUsed { get; set; }
     }
 
+    /// <summary>
+    /// Class used by the solver, so you don't need it
+    /// </summary>
     public class UnionFind
     {
         private int[] parent;
