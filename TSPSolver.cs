@@ -68,9 +68,6 @@
             int numberOfCities = 0;
             numberOfCities = cities.Count;
 
-            List<City2> convexHull = GetConvexHull(cities);
-            double convexHullArea = ComputeConvexHullArea(convexHull);
-
             double MST = ComputeMSTLength(cities, distances).totalLength;
 
             List<Distance2> distancesOrdered = new List<Distance2>(distances.OrderBy(d => d.DistanceSquear));
@@ -79,6 +76,40 @@
 
             List<Distance2> route = new List<Distance2>();
             UnionFind uf = new UnionFind(numberOfCities);
+
+            #region Adaptive factor
+            double meanEdgeLength = MST / (numberOfCities - 1);
+            double variance = 0.0;
+
+            foreach (var edge in distances)
+            {
+                variance += Math.Pow(edge.DistanceSquear - meanEdgeLength, 2);
+            }
+
+            variance /= (numberOfCities - 1);
+            double standardDeviation = Math.Sqrt(variance);
+            double adaptiveFactor = Math.Max(standardDeviation / meanEdgeLength, 0.05 + 0.1 * Math.Log(numberOfCities));
+
+            adaptiveFactor *= 1 + (Math.Log(numberOfCities) / 10);
+            #endregion
+
+            #region Density factor
+            List<City2> convexHull = GetConvexHull(cities);
+            double convexHullArea = ComputeConvexHullArea(convexHull);
+            double densityFactor = MST / (numberOfCities * Math.Sqrt(convexHullArea));
+
+            densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
+            #endregion
+
+            #region Hybrid factor
+            double weight = Math.Min(numberOfCities / 1000.0, 1);
+            double hybridFactor = adaptiveFactor * (1 - weight) + densityFactor * weight;
+
+            double adjustmentFactor = 1 + Math.Log(numberOfCities) / 15;
+            hybridFactor *= adjustmentFactor;
+            #endregion
+
+            double referenceFactor = Math.Max(MST, meanEdgeLength * numberOfCities);
 
             while (route.Count < numberOfCities && distancesOrdered.Count > 0)
             {
@@ -117,37 +148,6 @@
                     (bool, double) caseOneMST = ComputeMSTLength(cities, caseOnebuffer);
                     (bool, double) caseTwoMST = ComputeMSTLength(cities, caseTwobuffer);
 
-                    #region Magic numbers
-                    #region Adaptive factor
-                    double meanEdgeLength = MST / (numberOfCities - 1);
-                    double variance = 0.0;
-
-                    foreach (var edge in distances)
-                    {
-                        variance += Math.Pow(edge.DistanceSquear - meanEdgeLength, 2);
-                    }
-
-                    variance /= (numberOfCities - 1);
-                    double standardDeviation = Math.Sqrt(variance);
-                    double adaptiveFactor = Math.Max(standardDeviation / meanEdgeLength, 0.05 + 0.1 * Math.Log(numberOfCities));
-
-                    adaptiveFactor *= 1 + (Math.Log(numberOfCities) / 10);
-                    #endregion
-
-                    #region Density factor
-                    double densityFactor = MST / (numberOfCities * Math.Sqrt(convexHullArea));
-
-                    densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
-                    #endregion
-
-                    #region Hybrid factor
-                    double weight = Math.Min(numberOfCities / 1000.0, 1);
-                    double hybridFactor = adaptiveFactor * (1 - weight) + densityFactor * weight;
-
-                    double adjustmentFactor = 1 + Math.Log(numberOfCities) / 15;
-                    hybridFactor *= adjustmentFactor;
-                    #endregion
-
                     #region Ratios
                     double ratioOne = (caseOneMST.Item2 / caseTwoMST.Item2) / MST;
                     double ratioTwo = (caseTwoMST.Item2 / caseOneMST.Item2) / MST;
@@ -156,10 +156,8 @@
                     double normalizedRatioTwo = Math.Min(ratioTwo, Math.Log(numberOfCities) * 0.5);
                     #endregion
 
-                    double referenceFactor = Math.Max(MST, meanEdgeLength * numberOfCities);
                     double magicNumberOne = 1 + (normalizedRatioOne * (numberOfCities * (numberOfCities - 1) / 2) * (2 * referenceFactor) * hybridFactor);
                     double magicNumberTwo = 1 + (normalizedRatioTwo * (numberOfCities * (numberOfCities - 1) / 2) * (2 * referenceFactor) * hybridFactor);
-                    #endregion
 
                     double adjustedOne = caseOneMST.Item2 * magicNumberOne;
                     double adjustedTwo = caseTwoMST.Item2 * magicNumberTwo;
@@ -531,7 +529,7 @@
     /// <summary>
     /// Class representing 2D points
     /// </summary>
-    public class City2 : City
+    public class City2 : ICity
     {
         public int Id { get; set; }
         public double X { get; set; }
@@ -588,52 +586,95 @@
     {
         public List<City3> Cities { get; set; } = new();
         public List<Distance3> Distances { get; set; } = new();
+        public Dictionary<Tuple<City3, City3>, double> CachedDistances { get; set; } = new();
+        public double Radius { get; set; } = 0;
+        public bool Symmetric { get; set; } = true;
         /// <summary>
         /// 3D solver builger
         /// </summary>
         /// <param name="cities"></param>
-        public TSPSolver3D(List<City3> cities)
+        public TSPSolver3D(List<City3> cities, bool geodesic, double radius = 6371000)
         {
             Cities = cities;
 
-            for (int i = 0; i < Cities.Count; i++)
+            if (geodesic)
             {
-                for (int j = i + 1; j < Cities.Count; j++)
+                Radius = radius;
+
+                for (int i = 0; i < Cities.Count; i++)
                 {
-                    Distances.Add(new Distance3(Cities[i], Cities[j]));
+                    for (int j = i + 1; j < Cities.Count; j++)
+                    {
+                        Distances.Add(new Distance3(Cities[i], Cities[j], Radius));
+                        CachedDistances.Add(Tuple.Create(Distances.Last().First, Distances.Last().Second), Distances.Last().Distance);
+                    }
+                }
+            }else
+            {
+                for (int i = 0; i < Cities.Count; i++)
+                {
+                    for (int j = i + 1; j < Cities.Count; j++)
+                    {
+                        Distances.Add(new Distance3(Cities[i], Cities[j]));
+                        CachedDistances.Add(Tuple.Create(Distances.Last().First, Distances.Last().Second), Distances.Last().Distance);
+                    }
                 }
             }
         }
+
+        public TSPSolver3D(List<City3> cities, List<Distance3> distances, bool geodesic, bool symmetric, double radius = 6371000)
+        {
+            Cities = cities;
+            Distances = distances;
+
+            if (geodesic)
+                Radius = radius;
+
+            Symmetric = symmetric;
+
+            for (int i = 0; i < distances.Count; i++)
+            {
+                CachedDistances.Add(Tuple.Create(Distances[i].First, Distances[i].Second), Distances[i].Distance);
+            }
+        }
+
+
         /// <summary>
         /// The function for solving the problem in a 3D configuration
         /// </summary>
         /// <param name="threeOpt"></param>
         /// <returns>The best route found, its distance and the MST</returns>
-        public (List<City3> route, double length, double MST) Solve(bool threeOpt)
+        public (List<City3> route, double length, double MST) Solve(bool threeOpt = false, bool twoAndOneOpt = false)
         {
             List<City3> route = TSPSolver3DFunctions.Solve(Cities, Distances);
-            TSPSolver3DFunctions.TwoOpt(ref route);
+            Console.WriteLine($"First step finished, length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
+
+            if (twoAndOneOpt)
+                TSPSolver3DFunctions.TwoOpt(ref route, CachedDistances, Symmetric);
+
+            Console.WriteLine($"Length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
 
             if (threeOpt)
-            {
-                TSPSolver3DFunctions.ThreeOpt(ref route);
-            }
+                TSPSolver3DFunctions.ThreeOpt(ref route, CachedDistances, Symmetric);
 
             bool improved = true;
 
-            while (improved)
+            while (improved && twoAndOneOpt)
             {
-                improved = TSPSolver3DFunctions.OneOpt(ref route);
+                improved = TSPSolver3DFunctions.OneOpt(ref route, Distances, CachedDistances, Symmetric);
             }
 
-            TSPSolver3DFunctions.TwoOpt(ref route);
+            Console.WriteLine($"Length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
+
+            if (twoAndOneOpt)
+                TSPSolver3DFunctions.TwoOpt(ref route, CachedDistances, Symmetric);
+
+            Console.WriteLine($"Length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
 
             if (threeOpt)
-            {
-                TSPSolver3DFunctions.ThreeOpt(ref route);
-            }
+                TSPSolver3DFunctions.ThreeOpt(ref route, CachedDistances, Symmetric);
 
-            double length = TSPSolver3DFunctions.CalculateTotalPathLength(route);
+            double length = TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2;
 
             double MST = TSPSolver3DFunctions.ComputeMSTLength(Cities, Distances).Item2;
 
@@ -651,17 +692,52 @@
             int numberOfCities = 0;
             numberOfCities = cities.Count;
 
-            List<Face> convexHull = GetConvexHull(cities);
-            double convexHullArea = ComputeConvexHullArea(convexHull);
+            (bool pathPossible, double MST) MSTDuo = ComputeMSTLength(cities, distances);
 
-            double MST = ComputeMSTLength(cities, distances).totalLength;
+            if (!MSTDuo.pathPossible)
+                throw new Exception("Not enough distance to make a path");
 
-            List<Distance3> distancesOrdered = new List<Distance3>(distances.OrderBy(d => d.DistanceSquear));
-            double Dmax = distancesOrdered.Last().DistanceSquear;
+            List<Distance3> distancesOrdered = new List<Distance3>(distances.OrderBy(d => d.Distance));
+
             List<Distance3> buffer = new List<Distance3>(distancesOrdered);
 
             List<Distance3> route = new List<Distance3>();
             UnionFind uf = new UnionFind(numberOfCities);
+
+            #region Adaptive factor
+            double meanEdgeLength = MSTDuo.MST / (numberOfCities - 1);
+            double variance = 0.0;
+
+            foreach (var edge in distances)
+            {
+                variance += Math.Pow(edge.Distance - meanEdgeLength, 2);
+            }
+
+            variance /= (numberOfCities - 1);
+            double standardDeviation = Math.Sqrt(variance);
+            double adaptiveFactor = Math.Max(standardDeviation / meanEdgeLength, 0.05 + 0.1 * Math.Log(numberOfCities));
+
+            adaptiveFactor *= 1 + (Math.Log(numberOfCities) / 10);
+            #endregion
+
+            #region Density factor
+            List<Face> convexHull = GetConvexHull(cities);
+            double convexHullArea = ComputeConvexHullArea(convexHull);
+
+            double densityFactor = MSTDuo.MST / (numberOfCities * Math.Sqrt(convexHullArea));
+
+            densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
+            #endregion
+
+            #region Hybrid factor
+            double weight = Math.Min(numberOfCities / 1000.0, 1);
+            double hybridFactor = adaptiveFactor * (1 - weight) + densityFactor * weight;
+
+            double adjustmentFactor = 1 + Math.Log(numberOfCities) / 15;
+            hybridFactor *= adjustmentFactor;
+            #endregion
+
+            double referenceFactor = Math.Max(MSTDuo.MST, meanEdgeLength * numberOfCities);
 
             while (route.Count < numberOfCities && distancesOrdered.Count > 0)
             {
@@ -673,26 +749,17 @@
 
                 if (route.Count < numberOfCities - 1)
                 {
-                    if (buffer.Count > 0)
-                    {
-                        Dmax = buffer.Max(d => d.DistanceSquear);
-                    }
-                    else
-                    {
-                        Dmax = 0;
-                    }
-
                     List<Distance3> caseOnebuffer = new List<Distance3>(buffer);
                     List<Distance3> caseTwobuffer = new List<Distance3>(buffer);
 
                     if (d.First.TimeUsed + 1 >= 2)
                     {
-                        caseOnebuffer.RemoveAll(a => a.Contains(d.First) && a.DistanceSquear > d.DistanceSquear);
+                        caseOnebuffer.RemoveAll(a => a.Contains(d.First) && a.Distance > d.Distance);
                     }
 
                     if (d.Second.TimeUsed + 1 >= 2)
                     {
-                        caseOnebuffer.RemoveAll(a => a.Contains(d.Second) && a.DistanceSquear > d.DistanceSquear);
+                        caseOnebuffer.RemoveAll(a => a.Contains(d.Second) && a.Distance > d.Distance);
                     }
 
                     caseTwobuffer.Remove(d);
@@ -700,49 +767,16 @@
                     (bool, double) caseOneMST = ComputeMSTLength(cities, caseOnebuffer);
                     (bool, double) caseTwoMST = ComputeMSTLength(cities, caseTwobuffer);
 
-                    #region Magic numbers
-                    #region Adaptive factor
-                    double meanEdgeLength = MST / (numberOfCities - 1);
-                    double variance = 0.0;
-
-                    foreach (var edge in distances)
-                    {
-                        variance += Math.Pow(edge.DistanceSquear - meanEdgeLength, 2);
-                    }
-
-                    variance /= (numberOfCities - 1);
-                    double standardDeviation = Math.Sqrt(variance);
-                    double adaptiveFactor = Math.Max(standardDeviation / meanEdgeLength, 0.05 + 0.1 * Math.Log(numberOfCities));
-
-                    adaptiveFactor *= 1 + (Math.Log(numberOfCities) / 10);
-                    #endregion
-
-                    #region Density factor
-                    double densityFactor = MST / (numberOfCities * Math.Sqrt(convexHullArea));
-
-                    densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
-                    #endregion
-
-                    #region Hybrid factor
-                    double weight = Math.Min(numberOfCities / 1000.0, 1);
-                    double hybridFactor = adaptiveFactor * (1 - weight) + densityFactor * weight;
-
-                    double adjustmentFactor = 1 + Math.Log(numberOfCities) / 15;
-                    hybridFactor *= adjustmentFactor;
-                    #endregion
-
                     #region Ratios
-                    double ratioOne = (caseOneMST.Item2 / caseTwoMST.Item2) / MST;
-                    double ratioTwo = (caseTwoMST.Item2 / caseOneMST.Item2) / MST;
+                    double ratioOne = (caseOneMST.Item2 / caseTwoMST.Item2) / MSTDuo.MST;
+                    double ratioTwo = (caseTwoMST.Item2 / caseOneMST.Item2) / MSTDuo.MST;
 
                     double normalizedRatioOne = Math.Min(ratioOne, Math.Log(numberOfCities) * 0.5);
                     double normalizedRatioTwo = Math.Min(ratioTwo, Math.Log(numberOfCities) * 0.5);
                     #endregion
 
-                    double referenceFactor = Math.Max(MST, meanEdgeLength * numberOfCities);
                     double magicNumberOne = 1 + (normalizedRatioOne * (numberOfCities * (numberOfCities - 1) / 2) * (2 * referenceFactor) * hybridFactor);
                     double magicNumberTwo = 1 + (normalizedRatioTwo * (numberOfCities * (numberOfCities - 1) / 2) * (2 * referenceFactor) * hybridFactor);
-                    #endregion
 
                     double adjustedOne = caseOneMST.Item2 * magicNumberOne;
                     double adjustedTwo = caseTwoMST.Item2 * magicNumberTwo;
@@ -765,12 +799,12 @@
 
                         if (d.First.TimeUsed >= 2)
                         {
-                            buffer.RemoveAll(a => a.Contains(d.First) && a.DistanceSquear > d.DistanceSquear);
+                            buffer.RemoveAll(a => a.Contains(d.First) && a.Distance > d.Distance);
                         }
 
                         if (d.Second.TimeUsed >= 2)
                         {
-                            buffer.RemoveAll(a => a.Contains(d.Second) && a.DistanceSquear > d.DistanceSquear);
+                            buffer.RemoveAll(a => a.Contains(d.Second) && a.Distance > d.Distance);                    
                         }
                     }
                     else
@@ -833,7 +867,7 @@
                 return (false, 0.0);
 
             UnionFind uf = new UnionFind(cities.Count);
-            var sortedEdges = distances.OrderBy(d => d.DistanceSquear);
+            var sortedEdges = distances.OrderBy(d => d.Distance);
 
             double totalLength = 0.0;
             int edgesUsed = 0;
@@ -842,7 +876,7 @@
             {
                 if (uf.Union(d.First, d.Second))
                 {
-                    totalLength += Math.Sqrt(d.DistanceSquear);
+                    totalLength += d.Distance;
                     edgesUsed++;
 
                     if (edgesUsed == cities.Count - 1)
@@ -850,11 +884,11 @@
                 }
             }
 
-            bool success = (edgesUsed == cities.Count - 1);
+            bool success = edgesUsed == cities.Count - 1;
             return (success, totalLength);
         }
 
-        public static void TwoOpt(ref List<City3> route)
+        public static void TwoOpt(ref List<City3> route, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
             int n = route.Count - 1;
             bool improvement = true;
@@ -866,25 +900,38 @@
                 {
                     for (int j = i + 1; j < n; j++)
                     {
-                        if (ShouldSwap(route, i, j))
+                        if (ShouldSwap(route, i, j, cachedDistances, symmetric))
                         {
-                            TwoOptSwap(ref route, i, j);
-                            improvement = true;
+                            Swap(ref route, i, j);
                         }
                     }
                 }
             }
+
+            return;
         }
 
-        public static bool ShouldSwap(List<City3> route, int i, int j)
+        public static bool ShouldSwap(List<City3> route, int i, int j, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
-            double distBefore = CalculateDistance(route[i - 1], route[i]) + CalculateDistance(route[j], route[j + 1]);
-            double distAfter = CalculateDistance(route[i - 1], route[j]) + CalculateDistance(route[i], route[j + 1]);
+            if (i <= 0 || j >= route.Count - 1)
+                return false;
+
+            (bool find1, double newDist1) = CalculateDistance(route[i - 1], route[j], cachedDistances, symmetric);
+            (bool find2, double newDist2) = CalculateDistance(route[i], route[j + 1], cachedDistances, symmetric);
+
+            (bool find3, double oldDist1) = CalculateDistance(route[i - 1], route[i], cachedDistances, symmetric);
+            (bool find4, double oldDist2) = CalculateDistance(route[j], route[j + 1], cachedDistances, symmetric);
+            
+            if (!(find1 && find2 && find3 && find4))
+                return false;
+
+            double distBefore = oldDist1 + oldDist2;
+            double distAfter = newDist1 + newDist2;
 
             return distAfter < distBefore;
         }
 
-        public static void TwoOptSwap(ref List<City3> route, int i, int j)
+        public static void Swap(ref List<City3> route, int i, int j)
         {
             while (i < j)
             {
@@ -896,9 +943,10 @@
             }
         }
 
-        public static void ThreeOpt(ref List<City3> route)
+        public static void ThreeOpt(ref List<City3> route, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
             bool improved = true;
+            double currentDistance = CalculateTotalPathLength(route, cachedDistances, symmetric).Item2;
 
             while (improved)
             {
@@ -909,13 +957,13 @@
                     {
                         for (int k = j + 1; k < route.Count; k++)
                         {
-                            double currentDistance = CalculateTotalPathLength(route);
                             var newRoute = Apply3OptSwap(route, i, j, k);
-                            double newDistance = CalculateTotalPathLength(newRoute);
+                            (bool v, double newDistance) newDist = CalculateTotalPathLength(newRoute, cachedDistances, symmetric);
 
-                            if (newDistance < currentDistance)
+                            if (newDist.newDistance < currentDistance && newDist.v)
                             {
                                 route = newRoute;
+                                currentDistance = newDist.newDistance;
                                 improved = true;
                             }
                         }
@@ -928,42 +976,68 @@
         public static List<City3> Apply3OptSwap(List<City3> route, int i, int j, int k)
         {
             var newRoute = new List<City3>(route);
-            TwoOptSwap(ref newRoute, i, j);
-            TwoOptSwap(ref newRoute, j, k);
+            Swap(ref newRoute, i, j);
+            Swap(ref newRoute, j, k);
 
             return newRoute;
         }
 
-        public static double CalculateDistance(City3 city1, City3 city2)
+        public static (bool, double) CalculateDistance(City3 city1, City3 city2, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
-            return Math.Sqrt(Math.Pow(city2.Position.X - city1.Position.X, 2) + Math.Pow(city2.Position.Y - city1.Position.Y, 2) + Math.Pow(city2.Position.Z - city1.Position.Z, 2));
+            Tuple<City3, City3> key = symmetric ?  (city1.Id < city2.Id ? Tuple.Create(city1, city2) : Tuple.Create(city2, city1)) 
+                : Tuple.Create(city1, city2);
+
+            if (cachedDistances.TryGetValue(key, out double cachedDistance))
+            {
+                return (true, cachedDistance);
+            }
+
+            return (false, 0);
         }
 
-        public static double CalculateTotalPathLength(List<City3> route)
+        public static (bool, double) CalculateTotalPathLength(List<City3> route, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
             double totalLength = 0.0;
+            bool valid = true;
 
             for (int i = 0; i < route.Count - 1; i++)
             {
-                totalLength += CalculateDistance(route[i], route[i + 1]);
+                double length = CalculateDistance(route[i], route[i + 1], cachedDistances, symmetric).Item2;
+                if (length >= 0)
+                    totalLength += length;
+                else
+                    valid = false;
             }
 
-            totalLength += CalculateDistance(route[route.Count - 1], route[0]);
-
-            return totalLength;
+            return (valid, totalLength);
         }
 
-        public static List<Distance3> GetDistancesInPath(List<City3> route)
+        public static List<Distance3> GetDistancesInPath(List<City3> route, List<Distance3> distances, bool symmetric)
         {
             List<Distance3> result = new List<Distance3>();
             for (int i = 0; i < route.Count - 1; i++)
             {
-                result.Add(new Distance3(route[i], route[i + 1]));
-            }
+                if (route[i].Id != route[i + 1].Id)
+                {
+                    if (!symmetric)
+                    {
+                        List<Distance3> find = distances.FindAll(a => a.Is(route[i], route[i + 1])).ToList();
 
-            Distance3 d = new Distance3(route[route.Count - 1], route[0]);
-            if (d.DistanceSquear > 0)
-                result.Add(d);
+                        if (find.Count > 0)
+                        {
+                            result.Add(find.First());
+                        }
+                    }else
+                    {
+                        List<Distance3> find = distances.FindAll(a => a.Contains(route[i], route[i + 1])).ToList();
+
+                        if (find.Count > 0)
+                        {
+                            result.Add(find.First());
+                        }
+                    }
+                }
+            }
 
             return result;
         }
@@ -1005,9 +1079,9 @@
             return area;
         }
 
-        public static bool OneOpt(ref List<City3> route)
+        public static bool OneOpt(ref List<City3> route, List<Distance3> allDistances, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
-            List<Distance3> distances = GetDistancesInPath(route).OrderByDescending(d => d.DistanceSquear).ToList();
+            List<Distance3> distances = GetDistancesInPath(route, allDistances, symmetric).OrderByDescending(d => d.Distance).ToList();
             Dictionary<City3, byte> cities = new Dictionary<City3, byte>();
 
             Dictionary<City3, List<Distance3>> cityDistances = new Dictionary<City3, List<Distance3>>();
@@ -1027,7 +1101,7 @@
             bool improved = false;
 
             int i = 0;
-            double length = CalculateTotalPathLength(route);
+            double length = CalculateTotalPathLength(route, cachedDistances, symmetric).Item2;
 
             City3 c = null;
             List<City3> result = new List<City3>(route);
@@ -1058,8 +1132,8 @@
                     }
                     else
                     {
-                        double first = cityDistances[d.First].Max(a => a.DistanceSquear);
-                        double second = cityDistances[d.Second].Max(a => a.DistanceSquear);
+                        double first = cityDistances[d.First].Max(a => a.Distance);
+                        double second = cityDistances[d.Second].Max(a => a.Distance);
 
                         c = first < second ? d.Second : d.First;
                     }
@@ -1077,12 +1151,12 @@
                     newRoute.Remove(c);
                     newRoute.Insert(j, c);
 
-                    double l = CalculateTotalPathLength(newRoute);
+                    (bool v, double l) vl = CalculateTotalPathLength(newRoute, cachedDistances, symmetric);
 
-                    if (l < length)
+                    if (vl.l < length && vl.v)
                     {
                         improved = true;
-                        length = l;
+                        length = vl.l;
                         result = newRoute;
                     }
                 }
@@ -1098,17 +1172,25 @@
     /// <summary>
     /// Class representing 3D points
     /// </summary>
-    public class City3 : City
+    public class City3: ICity
     {
         public int Id { get; set; }
         public Vector3 Position { get; set; }
-        public byte TimeUsed { get; set; }
+        public byte TimeUsed { get; set; } = 0;
 
         public City3(Vector3 position, int id)
         {
             Position = position;
             Id = id;
-            TimeUsed = 0;
+        }
+
+        public City3(double latitude, double longitude, double altitude, int id, double radius = 6371000)
+        {
+            double X = (radius + altitude) * Math.Cos(latitude) * Math.Cos(longitude);
+            double Y = (radius + altitude) * Math.Cos(latitude) * Math.Sin(longitude);
+            double Z = (radius + altitude) * Math.Sin(latitude);
+            Id = id;
+            Position = new Vector3(X, Y, Z);
         }
     }
 
@@ -1119,7 +1201,7 @@
     {
         public City3 First { get; set; }
         public City3 Second { get; set; }
-        public double DistanceSquear { get; set; }
+        public double Distance { get; set; }
 
         public bool Contains(City3 city)
         {
@@ -1137,10 +1219,76 @@
 
         public Distance3(City3 first, City3 second)
         {
+            if (first.Id < second.Id)
+            {
+                First = first;
+                Second = second;
+            }
+            else
+            {
+                First = second;
+                Second = first;
+            }
+
+            Distance = Math.Sqrt(Math.Pow(second.Position.X - first.Position.X, 2) + Math.Pow(second.Position.Y - first.Position.Y, 2) + Math.Pow(second.Position.Z - first.Position.Z, 2));
+        }
+
+        public Distance3(City3 first, City3 second, double radius)
+        {
+            if (first.Id < second.Id)
+            {
+                First = first;
+                Second = second;
+            }
+            else
+            {
+                First = second;
+                Second = first;
+            }
+
+            Distance = GeodesicDistance(first.Position, second.Position, radius);
+        }
+
+        public Distance3(double distance, City3 first, City3 second)
+        {
             First = first;
             Second = second;
+            Distance = distance;
+        }
 
-            DistanceSquear = ((second.Position.X - first.Position.X) * (second.Position.X - first.Position.X)) + ((second.Position.Y - first.Position.Y) * (second.Position.Y - first.Position.Y)) + ((second.Position.Z - first.Position.Z) * (second.Position.Z - first.Position.Z));
+        private static double GeodesicDistance(Vector3 p1, Vector3 p2, double radius)
+        {
+            double dotProduct = Vector3.Dot(p1, p2);
+            double normA = p1.Norme();
+            double normB = p2.Norme();
+
+            double cosTheta = dotProduct / (normA * normB);
+            double theta = Math.Acos(cosTheta);
+
+            return radius * theta;
+        }
+
+        public bool Is(City3 first, City3 second)
+        {
+            return first == First && second == Second;
+        }
+    }
+
+    /// <summary>
+    /// Class used by some solver functions, so you don't need it
+    /// </summary>
+    public class Face
+    {
+        public City3 A, B, C;
+        public Vector3 Normal;
+
+        public Face(City3 a, City3 b, City3 c)
+        {
+            A = a;
+            B = b;
+            C = c;
+            Normal = Vector3.Cross(B.Position - A.Position, C.Position - A.Position);
+            Normal = Vector3.Normalize(Normal);
         }
     }
 
@@ -1205,30 +1353,12 @@
         }
     }
 
-    /// <summary>
-    /// Class used by some solver functions, so you don't need it
-    /// </summary>
-    public class Face
-    {
-        public City3 A, B, C;
-        public Vector3 Normal;
-
-        public Face(City3 a, City3 b, City3 c)
-        {
-            A = a;
-            B = b;
-            C = c;
-            Normal = Vector3.Cross(B.Position - A.Position, C.Position - A.Position);
-            Normal = Vector3.Normalize(Normal);
-        }
-    }
-
     #endregion
 
     /// <summary>
     /// Interface used by points
     /// </summary>
-    public interface City
+    public interface ICity
     {
         int Id { get; set; }
         byte TimeUsed { get; set; }
@@ -1252,7 +1382,7 @@
             return parent[i];
         }
 
-        public bool Union(City i, City j)
+        public bool Union(ICity i, ICity j)
         {
             int rootI = Find(i.Id);
             int rootJ = Find(j.Id);
