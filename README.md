@@ -143,8 +143,6 @@ Here are three examples of use in C# :
 ### 1: geodesic 3D
 
 ```csharp
-using System;
-using System.Collections.Generic;
 using TSP_Solver;
 
 Console.WriteLine("Number of cities:");
