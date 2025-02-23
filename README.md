@@ -193,7 +193,7 @@ Console.WriteLine("MST: " + MST);
 double ratio = length / MST;
 Console.WriteLine("Ratio: " + ratio);
 
-`---`
+```
 
 ### 2: cartesian 3D
 
@@ -244,7 +244,7 @@ Console.WriteLine("MST: " + MST);
 double ratio = length / MST;
 Console.WriteLine("Ratio: " + ratio);
 
-`---`
+```
 
 ### 3: cartesian 2D
 
@@ -295,4 +295,4 @@ Console.WriteLine("MST: " + MST);
 double ratio = length / MST;
 Console.WriteLine("Ratio: " + ratio);
 
-`---`
+```
