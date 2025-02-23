@@ -1194,9 +1194,22 @@
     /// </summary>
     public class City3: ICity
     {
+        /// <summary>
+        /// The Id of the point to identify it
+        /// </summary>
         public int Id { get; set; }
+        /// <summary>
+        /// The point's coordinates
+        /// </summary>
         public Vector3 Position { get; set; }
+        /// <summary>
+        /// The times the point appears in the path distances created by the basic solver
+        /// </summary>
         public byte TimeUsed { get; set; } = 0;
+        /// <summary>
+        /// The radius of the earth
+        /// </summary>
+        public double EarthRadius { get; set; } = 6371000;
 
         /// <summary>
         /// City3 builder for cartesian 3D
@@ -1224,6 +1237,22 @@
             double Z = (radius + altitude) * Math.Sin(latitude);
             Id = id;
             Position = new Vector3(X, Y, Z);
+            EarthRadius = radius;
+        }
+        /// <summary>
+        /// Converts a point's cartesian coordinates into geodesic coordinates
+        /// </summary>
+        /// <returns>Return point's geodesic coordinates</returns>
+        public (double latitude, double longitude, double altitude) CartesianToGeodetic()
+        {
+            double longitude = Math.Atan2(Position.Y, Position.X);
+
+            double latitudinalDistance = Math.Sqrt(Position.X * Position.X + Position.Y * Position.Y);
+            double latitude = Math.Atan2(Position.Z, latitudinalDistance);
+
+            double altitude = Math.Sqrt(Position.X * Position.X + Position.Y * Position.Y + Position.Z * Position.Z) - EarthRadius;
+
+            return (latitude, longitude, altitude);
         }
     }
 

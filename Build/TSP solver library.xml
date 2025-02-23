@@ -78,6 +78,26 @@
             Class representing 3D points
             </summary>
         </member>
+        <member name="P:TSP_Solver.City3.Id">
+            <summary>
+            The Id of the point to identify it
+            </summary>
+        </member>
+        <member name="P:TSP_Solver.City3.Position">
+            <summary>
+            The point's coordinates
+            </summary>
+        </member>
+        <member name="P:TSP_Solver.City3.TimeUsed">
+            <summary>
+            The times the point appears in the path distances created by the basic solver
+            </summary>
+        </member>
+        <member name="P:TSP_Solver.City3.EarthRadius">
+            <summary>
+            The radius of the earth
+            </summary>
+        </member>
         <member name="M:TSP_Solver.City3.#ctor(TSP_Solver.Vector3,System.Int32)">
             <summary>
             City3 builder for cartesian 3D
@@ -94,6 +114,12 @@
             <param name="altitude">The altitude of the point in meters</param>
             <param name="id">The Id of the point</param>
             <param name="radius">The radius of the earth</param>
+        </member>
+        <member name="M:TSP_Solver.City3.CartesianToGeodetic">
+            <summary>
+            Converts a point's cartesian coordinates into geodesic coordinates
+            </summary>
+            <returns>Return point's geodesic coordinates</returns>
         </member>
         <member name="T:TSP_Solver.Distance3">
             <summary>

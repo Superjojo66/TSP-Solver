@@ -138,9 +138,64 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 
 ## Usage
 
-Here are two examples of use in C# :
+Here are three examples of use in C# :
 
-1:
+### 1: geodesic 3D
+
+```csharp
+using System;
+using System.Collections.Generic;
+using TSP_Solver;
+
+Console.WriteLine("Number of cities:");
+int numberOfCities = int.Parse(Console.ReadLine());
+
+List<City3> cities = new List<City3>();
+
+for (int i = 0; i < numberOfCities; i++)
+{
+    cities.Add(new City3(Random.Shared.NextInt64(-90, 90), Random.Shared.NextInt64(-180, 180), Random.Shared.NextInt64(0, 100), i));
+}
+
+foreach (City3 city in cities)
+{
+    Console.Write($"({city.Position.X},{city.Position.Y},{city.Position.Z}),");
+}
+
+Console.WriteLine();
+
+foreach (var city in cities)
+{
+    var coordinates = city.CartesianToGeodetic();
+    Console.WriteLine($"City {city.Id}; Positions: Latitude: {coordinates.latitude} Longitude: {coordinates.longitude} Altitude: {coordinates.altitude}");
+}
+
+TSPSolver3D solver = new TSPSolver3D(cities, true);
+
+(List<City3> citiesTraveled, double length, double MST) = solver.Solve(twoAndOneOpt: true);
+
+Console.Write("Route: ");
+for (int i = 0; i < citiesTraveled.Count; i++)
+{
+    Console.Write(citiesTraveled[i].Id);
+    if (i < citiesTraveled.Count - 1)
+    {
+        Console.Write(" -> ");
+    }else
+    {
+        Console.WriteLine();
+    }
+}
+
+Console.WriteLine("Route length: " + length);
+Console.WriteLine("MST: " + MST);
+
+double ratio = length / MST;
+Console.WriteLine("Ratio: " + ratio);
+
+`---`
+
+### 2: cartesian 3D
 
 ```csharp
 using TSP_Solver;
@@ -155,7 +210,6 @@ Console.WriteLine("Min X; Y and Z:");
 long minXY = long.Parse(Console.ReadLine());
 
 List<City3> cities = new List<City3>();
-List<Distance3> distances = new List<Distance3>();
 
 for (int i = 0; i < numberOfCities; i++)
 {
@@ -167,12 +221,9 @@ foreach (var city in cities)
     Console.WriteLine($"City {city.Id}; Positions: X: {city.Position.X} Y: {city.Position.Y} Z: {city.Position.Z}");
 }
 
-TSPSolver3D solver = new TSPSolver3D(cities);
+TSPSolver3D solver = new TSPSolver3D(cities, false);
 
-(List<City3>, double, double) result = solver.Solve(false);
-List<City3> citiesTraveled = result.Item1;
-double length = result.Item2;
-double MST = result.Item3;
+(List<City3> citesTraveled, double length, double MST) = solver.Solve();
 
 Console.Write("Route: ");
 for (int i = 0; i < citiesTraveled.Count; i++)
@@ -193,7 +244,9 @@ Console.WriteLine("MST: " + MST);
 double ratio = length / MST;
 Console.WriteLine("Ratio: " + ratio);
 
-2:
+`---`
+
+### 3: cartesian 2D
 
 ```csharp
 using TSP_Solver;
@@ -208,7 +261,6 @@ Console.WriteLine("Min X and Y:");
 long minXY = long.Parse(Console.ReadLine());
 
 List<City2> cities = new List<City2>();
-List<Distance2> distances = new List<Distance2>();
 
 for (int i = 0; i < numberOfCities; i++)
 {
@@ -222,10 +274,7 @@ foreach (var city in cities)
 
 TSPSolver2D solver = new TSPSolver2D(cities);
 
-(List<City2>, double, double) result = solver.Solve(false);
-List<City2> citiesTraveled = result.Item1;
-double length = result.Item2;
-double MST = result.Item3;
+(List<City2> citiesTraveled, double length, double MST) result = solver.Solve(false);
 
 Console.Write("Route: ");
 for (int i = 0; i < citiesTraveled.Count; i++)
@@ -245,3 +294,5 @@ Console.WriteLine("MST: " + MST);
 
 double ratio = length / MST;
 Console.WriteLine("Ratio: " + ratio);
+
+`---`
