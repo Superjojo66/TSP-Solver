@@ -1,6 +1,6 @@
 # TSP Solver
 
-A high-performance solver for the traveling salesman problem (TSP) in 3D and 2D space. It doesn't yet support geodesic 3D, and I don't know if I'd have the courage to do so.
+A high-performance solver for the traveling salesman problem (TSP) which support geodesic 3D, cartesian 3D, 2D. In addition, asymmetrical/symmetrical complete/incomplete TSPs can be solved in 3D, while only symmetrical and complete cases can be solved in 2D.
 
 ## Installation
 
@@ -13,7 +13,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) 
 
 ## Known limitations
 
-This system starts to be slow around 350 points (it takes a few seconds to find a path) and may (probably) not always find the best result.
+This system starts to be slow around 350 points (it takes a few seconds (about 10) to find the best path in 2D and even in 3D if you haven't activated 2-opt/1-opt and in both cases you haven't activated 3-opt) and may not always find the best result especially for large instances and without 2-opt and 1-opt.
 
 ## Classes and Functions
 
