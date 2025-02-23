@@ -4,8 +4,8 @@ A high-performance solver for the traveling salesman problem (TSP) which support
 
 ## Installation
 
-1. Download the `.dll` file from the repository.
-2. Add the `.dll` file at your project as a reference.
+**1.** Download the `.dll` file from the repository.
+**2.** Add the `.dll` file at your project as a reference.
 
 ## License
 
@@ -17,7 +17,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 
 ## Classes and Functions
 
-1. **2D classes and functions**:
+### 1. 2D classes and functions:
 
 	**A. TSPSolver2D**: The class to use for solving a TSP configuration. Functions:
 
@@ -64,7 +64,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 	**D. Distance2**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
 
 
-2. **3D classes and functions**:
+### 2. 3D classes and functions:
 
 	**A. TSPSolver3D**: The class to use for solving a TSP configuration. Functions:
 
@@ -125,7 +125,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 	**F. Face**: Used for the convex hull, a simple face with three edges.
 
 
-3. **2D and 3D classes and functions**:
+### 3. 2D and 3D classes and functions:
 
 	**A. City**: The interface used by the various classes serving as points.
 
