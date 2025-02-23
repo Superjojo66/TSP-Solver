@@ -5,6 +5,7 @@ A high-performance solver for the traveling salesman problem (TSP) which support
 ## Installation
 
 **1.** Download the `.dll` file from the repository.
+
 **2.** Add the `.dll` file at your project as a reference.
 
 ## License
