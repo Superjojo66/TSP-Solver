@@ -590,9 +590,11 @@
         public double Radius { get; set; } = 0;
         public bool Symmetric { get; set; } = true;
         /// <summary>
-        /// 3D solver builger
+        /// 3D solver builder
         /// </summary>
-        /// <param name="cities"></param>
+        /// <param name="cities">Points of the path you want to create</param>
+        /// <param name="geodesic">If you use geodesic 3D</param>
+        /// <param name="radius">The radius of the earth</param>
         public TSPSolver3D(List<City3> cities, bool geodesic, double radius = 6371000)
         {
             Cities = cities;
@@ -621,7 +623,14 @@
                 }
             }
         }
-
+        /// <summary>
+        /// 3D solver builder for cases where distances are required in creation (asymmetrical or incomplete cases)
+        /// </summary>
+        /// <param name="cities">Points of the path you want to create</param>
+        /// <param name="distances">Distances that can be used</param>
+        /// <param name="geodesic">If you use geodesic 3D</param>
+        /// <param name="symmetric">If the TSP is symmetric</param>
+        /// <param name="radius">The radius of the earth</param>
         public TSPSolver3D(List<City3> cities, List<Distance3> distances, bool geodesic, bool symmetric, double radius = 6371000)
         {
             Cities = cities;
@@ -642,17 +651,15 @@
         /// <summary>
         /// The function for solving the problem in a 3D configuration
         /// </summary>
-        /// <param name="threeOpt"></param>
+        /// <param name="threeOpt">If you want to use 3-opt</param>
+        /// <param name="twoAndOneOpt">If you want to use 2-opt and 1-opt</param>
         /// <returns>The best route found, its distance and the MST</returns>
         public (List<City3> route, double length, double MST) Solve(bool threeOpt = false, bool twoAndOneOpt = false)
         {
             List<City3> route = TSPSolver3DFunctions.Solve(Cities, Distances);
-            Console.WriteLine($"First step finished, length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
 
             if (twoAndOneOpt)
                 TSPSolver3DFunctions.TwoOpt(ref route, CachedDistances, Symmetric);
-
-            Console.WriteLine($"Length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
 
             if (threeOpt)
                 TSPSolver3DFunctions.ThreeOpt(ref route, CachedDistances, Symmetric);
@@ -664,12 +671,8 @@
                 improved = TSPSolver3DFunctions.OneOpt(ref route, Distances, CachedDistances, Symmetric);
             }
 
-            Console.WriteLine($"Length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
-
             if (twoAndOneOpt)
                 TSPSolver3DFunctions.TwoOpt(ref route, CachedDistances, Symmetric);
-
-            Console.WriteLine($"Length {TSPSolver3DFunctions.CalculateTotalPathLength(route, CachedDistances, Symmetric).Item2}");
 
             if (threeOpt)
                 TSPSolver3DFunctions.ThreeOpt(ref route, CachedDistances, Symmetric);
@@ -692,9 +695,10 @@
             int numberOfCities = 0;
             numberOfCities = cities.Count;
 
-            (bool pathPossible, double MST) MSTDuo = ComputeMSTLength(cities, distances);
+            double MST = ComputeMSTLength(cities, distances).totalLength;
+            bool pathPossible = IsGraphConnected(cities, distances);
 
-            if (!MSTDuo.pathPossible)
+            if (!pathPossible)
                 throw new Exception("Not enough distance to make a path");
 
             List<Distance3> distancesOrdered = new List<Distance3>(distances.OrderBy(d => d.Distance));
@@ -705,7 +709,7 @@
             UnionFind uf = new UnionFind(numberOfCities);
 
             #region Adaptive factor
-            double meanEdgeLength = MSTDuo.MST / (numberOfCities - 1);
+            double meanEdgeLength = MST / (numberOfCities - 1);
             double variance = 0.0;
 
             foreach (var edge in distances)
@@ -724,7 +728,7 @@
             List<Face> convexHull = GetConvexHull(cities);
             double convexHullArea = ComputeConvexHullArea(convexHull);
 
-            double densityFactor = MSTDuo.MST / (numberOfCities * Math.Sqrt(convexHullArea));
+            double densityFactor = MST / (numberOfCities * Math.Sqrt(convexHullArea));
 
             densityFactor *= Math.Pow(numberOfCities / 10.0, 0.2);
             #endregion
@@ -737,7 +741,7 @@
             hybridFactor *= adjustmentFactor;
             #endregion
 
-            double referenceFactor = Math.Max(MSTDuo.MST, meanEdgeLength * numberOfCities);
+            double referenceFactor = Math.Max(MST, meanEdgeLength * numberOfCities);
 
             while (route.Count < numberOfCities && distancesOrdered.Count > 0)
             {
@@ -764,12 +768,15 @@
 
                     caseTwobuffer.Remove(d);
 
-                    (bool, double) caseOneMST = ComputeMSTLength(cities, caseOnebuffer);
-                    (bool, double) caseTwoMST = ComputeMSTLength(cities, caseTwobuffer);
+                    double caseOneMST = ComputeMSTLength(cities, caseOnebuffer).totalLength;
+                    double caseTwoMST = ComputeMSTLength(cities, caseTwobuffer).totalLength;
+
+                    bool caseOneValid = IsGraphConnected(cities, caseOnebuffer);
+                    bool caseTwoValid = IsGraphConnected(cities, caseTwobuffer);
 
                     #region Ratios
-                    double ratioOne = (caseOneMST.Item2 / caseTwoMST.Item2) / MSTDuo.MST;
-                    double ratioTwo = (caseTwoMST.Item2 / caseOneMST.Item2) / MSTDuo.MST;
+                    double ratioOne = (caseOneMST / caseTwoMST) / MST;
+                    double ratioTwo = (caseTwoMST / caseOneMST) / MST;
 
                     double normalizedRatioOne = Math.Min(ratioOne, Math.Log(numberOfCities) * 0.5);
                     double normalizedRatioTwo = Math.Min(ratioTwo, Math.Log(numberOfCities) * 0.5);
@@ -778,12 +785,12 @@
                     double magicNumberOne = 1 + (normalizedRatioOne * (numberOfCities * (numberOfCities - 1) / 2) * (2 * referenceFactor) * hybridFactor);
                     double magicNumberTwo = 1 + (normalizedRatioTwo * (numberOfCities * (numberOfCities - 1) / 2) * (2 * referenceFactor) * hybridFactor);
 
-                    double adjustedOne = caseOneMST.Item2 * magicNumberOne;
-                    double adjustedTwo = caseTwoMST.Item2 * magicNumberTwo;
+                    double adjustedOne = caseOneMST * magicNumberOne;
+                    double adjustedTwo = caseTwoMST * magicNumberTwo;
 
                     bool caseOne = false;
 
-                    if (caseOneMST.Item1 && (adjustedOne <= adjustedTwo || !caseTwoMST.Item1))
+                    if (caseOneValid && (adjustedOne <= adjustedTwo || !caseTwoValid))
                         caseOne = true;
 
                     if (caseOne)
@@ -843,7 +850,7 @@
                 Distance3 d = temp.Find(t => t.Contains(commune));
 
                 if (d == null)
-                    throw new Exception("Distance qui n'existe pas");
+                    throw new Exception("Distance which does not exist");
 
                 if (d.First == commune)
                 {
@@ -860,6 +867,19 @@
 
             return result;
         }
+
+        public static bool IsGraphConnected(List<City3> cities, List<Distance3> distances)
+        {
+            UnionFind union = new UnionFind(cities.Count);
+
+            foreach (var d in distances)
+            {
+                union.Union(d.First, d.Second);
+            }
+
+            return union.IsFullyConnected;
+        }
+
 
         public static (bool success, double totalLength) ComputeMSTLength(List<City3> cities, List<Distance3> distances)
         {
@@ -982,7 +1002,7 @@
             return newRoute;
         }
 
-        public static (bool, double) CalculateDistance(City3 city1, City3 city2, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
+        public static (bool find, double length) CalculateDistance(City3 city1, City3 city2, Dictionary<Tuple<City3, City3>, double> cachedDistances, bool symmetric)
         {
             Tuple<City3, City3> key = symmetric ?  (city1.Id < city2.Id ? Tuple.Create(city1, city2) : Tuple.Create(city2, city1)) 
                 : Tuple.Create(city1, city2);
@@ -1178,12 +1198,25 @@
         public Vector3 Position { get; set; }
         public byte TimeUsed { get; set; } = 0;
 
+        /// <summary>
+        /// City3 builder for cartesian 3D
+        /// </summary>
+        /// <param name="position">The vector3 which contains the positions of the point</param>
+        /// <param name="id">The Id of the point</param>
         public City3(Vector3 position, int id)
         {
             Position = position;
             Id = id;
         }
 
+        /// <summary>
+        /// City3 builder for geodesic 3D
+        /// </summary>
+        /// <param name="latitude">The latitude of the point in radians</param>
+        /// <param name="longitude">The longitude of the point in radians</param>
+        /// <param name="altitude">The altitude of the point in meters</param>
+        /// <param name="id">The Id of the point</param>
+        /// <param name="radius">The radius of the earth</param>
         public City3(double latitude, double longitude, double altitude, int id, double radius = 6371000)
         {
             double X = (radius + altitude) * Math.Cos(latitude) * Math.Cos(longitude);
@@ -1203,20 +1236,34 @@
         public City3 Second { get; set; }
         public double Distance { get; set; }
 
+        /// <summary>
+        /// If the distance contains the point
+        /// </summary>
+        /// <param name="city">The point to test</param>
+        /// <returns>True if the distance contains the point else false</returns>
         public bool Contains(City3 city)
         {
             if (First == city || Second == city)
                 return true;
             return false;
         }
-
+        /// <summary>
+        /// If the distance is composed of the two points
+        /// </summary>
+        /// <param name="cityOne">One of the two points to test</param>
+        /// <param name="cityTwo">One of the two points to test</param>
+        /// <returns>True if the distance contains the two points else false</returns>
         public bool Contains(City3 cityOne, City3 cityTwo)
         {
             if (Contains(cityOne) && Contains(cityTwo))
                 return true;
             return false;
         }
-
+        /// <summary>
+        /// Simple Distance3 builder
+        /// </summary>
+        /// <param name="first">One of the points of the distance</param>
+        /// <param name="second">The other point of the distance</param>
         public Distance3(City3 first, City3 second)
         {
             if (first.Id < second.Id)
@@ -1232,7 +1279,12 @@
 
             Distance = Math.Sqrt(Math.Pow(second.Position.X - first.Position.X, 2) + Math.Pow(second.Position.Y - first.Position.Y, 2) + Math.Pow(second.Position.Z - first.Position.Z, 2));
         }
-
+        /// <summary>
+        /// Distance3 builder for the geodesic 3D
+        /// </summary>
+        /// <param name="first"></param>
+        /// <param name="second"></param>
+        /// <param name="radius"></param>
         public Distance3(City3 first, City3 second, double radius)
         {
             if (first.Id < second.Id)
@@ -1248,14 +1300,18 @@
 
             Distance = GeodesicDistance(first.Position, second.Position, radius);
         }
-
+        /// <summary>
+        /// Distance3 builder for the case where you have the distance
+        /// </summary>
+        /// <param name="distance">The distance between the start point and the end point</param>
+        /// <param name="first">The start point</param>
+        /// <param name="second">The end point</param>
         public Distance3(double distance, City3 first, City3 second)
         {
             First = first;
             Second = second;
             Distance = distance;
         }
-
         private static double GeodesicDistance(Vector3 p1, Vector3 p2, double radius)
         {
             double dotProduct = Vector3.Dot(p1, p2);
@@ -1267,10 +1323,18 @@
 
             return radius * theta;
         }
-
+        /// <summary>
+        /// If the points formed exactly the distance
+        /// </summary>
+        /// <param name="first">The start point</param>
+        /// <param name="second">The end point</param>
+        /// <returns>
+        /// True if the start point of the distance is the start point test 
+        /// and if the end point of the distance is the end point of the distance
+        /// </returns>
         public bool Is(City3 first, City3 second)
         {
-            return first == First && second == Second;
+            return (first == First && second == Second);
         }
     }
 
@@ -1281,7 +1345,12 @@
     {
         public City3 A, B, C;
         public Vector3 Normal;
-
+        /// <summary>
+        /// Face builder
+        /// </summary>
+        /// <param name="a">One of the corner points</param>
+        /// <param name="b">One of the corner points</param>
+        /// <param name="c">One of the corner points</param>
         public Face(City3 a, City3 b, City3 c)
         {
             A = a;
@@ -1370,12 +1439,15 @@
     public class UnionFind
     {
         private int[] parent;
+        private int count;
+
         public UnionFind(int n)
         {
             parent = Enumerable.Range(0, n).ToArray();
+            count = n;
         }
 
-        public int Find(int i)
+        private int Find(int i)
         {
             if (parent[i] != i)
                 parent[i] = Find(parent[i]);
@@ -1386,10 +1458,16 @@
         {
             int rootI = Find(i.Id);
             int rootJ = Find(j.Id);
+
             if (rootI == rootJ)
                 return false;
+
             parent[rootJ] = rootI;
+            count--;
+
             return true;
         }
+
+        public bool IsFullyConnected => count == 1;
     }
 }

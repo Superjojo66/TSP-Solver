@@ -1,15 +1,15 @@
 # TSP Solver
 
-A high-performance solver for the traveling salesman problem (TSP) which support geodesic 3D, cartesian 3D, 2D. In addition, asymmetrical/symmetrical complete/incomplete TSPs can be solved in 3D, while only symmetrical and complete cases can be solved in 2D.
+A high-performance solver for the traveling salesman problem (TSP) which support geodesic 3D, cartesian 3D, 2D. In addition, asymmetrical/symmetrical complete/incomplete TSP can be solved in 3D, while only symmetrical and complete cases can be solved in 2D.
 
 ## Installation
 
 1. Download the `.dll` file from the repository.
-2. Ajoutez le fichier `.dll` à votre projet en tant que référence.
+2. Add the `.dll` file at your project as a reference.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
 
 ## Known limitations
 
