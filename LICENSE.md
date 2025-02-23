@@ -1,6 +1,6 @@
-#MIT License
+# MIT License
 
-##Copyright (c) 2025 SuperJojo
+## Copyright (c) 2025 SuperJojo
 
 	1.This project is an open source library licensed under the MIT license.
 
