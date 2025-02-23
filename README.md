@@ -221,7 +221,7 @@ foreach (var city in cities)
 
 TSPSolver3D solver = new TSPSolver3D(cities, false);
 
-(List<City3> citesTraveled, double length, double MST) = solver.Solve();
+(List<City3> citesTraveled, double length, double MST) = solver.Solve(twoAndOneOpt: true);
 
 Console.Write("Route: ");
 for (int i = 0; i < citiesTraveled.Count; i++)
