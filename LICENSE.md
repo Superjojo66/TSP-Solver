@@ -2,7 +2,7 @@
 
 ## Copyright (c) 2025 SuperJojo
 
-###1.This project is an open source library licensed under the MIT license.
+### 1.This project is an open source library licensed under the MIT license.
 
 		A.You are hereby authorized to use, copy, modify, merge, publish, distribute, sublicense and/or sell copies of the software, and to authorize persons to whom the software is furnished to do so, subject to the following conditions:
 
