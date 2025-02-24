@@ -20,7 +20,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 
 ### 1. 2D classes and functions:
 
-	**A. TSPSolver2D**: The class to use for solving a TSP configuration. Functions:
+**A. TSPSolver2D**: The class to use for solving a TSP configuration. Functions:
 		```
 		a. Solve: The function for solving the problem. It returns the best path found, the path length and the MST. If you want to retrieve only one of the 3 results, you can put behind the call: 
 
@@ -29,7 +29,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 			-'.MST' to retrieve the MST.
 		```
 ___
-	**B. TSPSolver2DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
+**B. TSPSolver2DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
 		```
 		a. Solve: The function does most of the work: it takes as input the cities and distances to be used, and outputs the path that seems to be the best for these distances.
 	
@@ -62,14 +62,14 @@ ___
 		o. OneOpt: An algorithm that moves the point with the greatest distances to the most efficient location.
 		```
 ___
-	**C. City2**: Represents a point.
+**C. City2**: Represents a point.
 ___
-	**D. Distance2**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
+**D. Distance2**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
 
 
 ### 2. 3D classes and functions:
 
-	**A. TSPSolver3D**: The class to use for solving a TSP configuration. Functions:
+**A. TSPSolver3D**: The class to use for solving a TSP configuration. Functions:
 		```
 		a. Solve: The function for solving the problem. It returns the best path found, the path length and the MST. If you want to retrieve only one of the 3 results, you can put behind the call: 
 
@@ -78,7 +78,7 @@ ___
 			-'.MST' to retrieve the MST.
 		```
 ___
-	**B. TSPSolver3DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
+**B. TSPSolver3DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
 		```
 		a. Solve: The function does most of the work: it takes as input the cities and distances to be used, and outputs the path that seems to be the best for these distances.
 	
@@ -109,11 +109,11 @@ ___
 		n. OneOpt: An algorithm that moves the point with the greatest distances to the most efficient location.
 		```
 ___
-	**C. City3**: Represents a point.
+**C. City3**: Represents a point.
 ___
-	**D. Distance3**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
+**D. Distance3**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
 ___
-	**E. Vector3**: A simple 3D vector used in the points. Functions:
+**E. Vector3**: A simple 3D vector used in the points. Functions:
 		```
 		a. Norme: Returns the vector norm. A non-static function.
 	
@@ -128,14 +128,14 @@ ___
 		f. Normalize: Normalize a vector. A static function.
 		```
 ___
-	**F. Face**: Used for the convex hull, a simple face with three edges.
+**F. Face**: Used for the convex hull, a simple face with three edges.
 
 
 ### 3. 2D and 3D classes and functions:
 
-	**A. City**: The interface used by the various classes serving as points.
+**A. City**: The interface used by the various classes serving as points.
 ___
-	**B. UnionFind**: The class used to check whether a loop will be created. Functions:
+**B. UnionFind**: The class used to check whether a loop will be created. Functions:
 		```
 		a. Find: Returns the furthest parent (in terms of links) of index point i.
 
