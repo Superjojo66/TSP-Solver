@@ -27,7 +27,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 			-'.route' to retrieve the path, 
 			-'.length' to retrieve the path length, 
 			-'.MST' to retrieve the MST.
----
+
 **B. TSPSolver2DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
 
 		a. Solve: The function does most of the work: it takes as input the cities and distances to be used, and outputs the path that seems to be the best for these distances.
@@ -59,12 +59,11 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 		n. ComputeConvexHullArea: The function that returns the area of the convex hull.
 
 		o. OneOpt: An algorithm that moves the point with the greatest distances to the most efficient location.
----
+
 **C. City2**: Represents a point.
----
+
 **D. Distance2**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
 
-***
 ***
 ### 2. 3D classes and functions:
 
@@ -75,7 +74,7 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 			-'.route' to retrieve the path, 
 			-'.length' to retrieve the path length, 
 			-'.MST' to retrieve the MST.
----
+
 **B. TSPSolver3DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
 
 		a. Solve: The function does most of the work: it takes as input the cities and distances to be used, and outputs the path that seems to be the best for these distances.
@@ -105,11 +104,11 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 		m. ComputeConvexHullArea: The function that returns the area of the convex hull.
 
 		n. OneOpt: An algorithm that moves the point with the greatest distances to the most efficient location.
----
+
 **C. City3**: Represents a point.
----
+
 **D. Distance3**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
----
+
 **E. Vector3**: A simple 3D vector used in the points. Functions:
 
 		a. Norme: Returns the vector norm. A non-static function.
@@ -123,15 +122,14 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 		e. Dot: Returns the scalar product between 2 vectors. A static function.
 
 		f. Normalize: Normalize a vector. A static function.
----
+
 **F. Face**: Used for the convex hull, a simple face with three edges.
 
-***
 ***
 ### 3. 2D and 3D classes and functions:
 
 **A. City**: The interface used by the various classes serving as points.
----
+
 **B. UnionFind**: The class used to check whether a loop will be created. Functions:
 
 		a. Find: Returns the furthest parent (in terms of links) of index point i.
