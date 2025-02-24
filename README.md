@@ -27,7 +27,6 @@ This system starts to be slow around 350 points (it takes a few seconds (about 1
 			-'.route' to retrieve the path, 
 			-'.length' to retrieve the path length, 
 			-'.MST' to retrieve the MST.
-		```
 ___
 **B. TSPSolver2DFunctions**: The class containing all the functions used by the solver. A static class. Functions:
 
@@ -65,7 +64,7 @@ ___
 ___
 **D. Distance2**: Represents a distance between 2 points. This class contains the squared distance between the 2 points, as well as the 2 points themselves.
 
-
+***
 ### 2. 3D classes and functions:
 
 **A. TSPSolver3D**: The class to use for solving a TSP configuration. Functions:
@@ -126,7 +125,7 @@ ___
 ___
 **F. Face**: Used for the convex hull, a simple face with three edges.
 
-
+***
 ### 3. 2D and 3D classes and functions:
 
 **A. City**: The interface used by the various classes serving as points.
